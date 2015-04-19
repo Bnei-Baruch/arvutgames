@@ -1,0 +1,29 @@
+/*
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+*/
+/* 
+    Created on : Mar 26, 2015, 3:29:09 AM
+    Author     : igal
+*/
+
+.custom-btn.ui-icon.login-icon {
+    background-image: url(http://i.imgur.com/qLgpl.png);
+    width: 50px;
+    height: 17px; 
+    margin-left: -25px;
+    margin-top: -8px;
+}
+
+.custom-btn {
+    width: 200px;
+    height: 200px;
+    
+     position:relative;
+    top:80%; 
+    left:20%;
+    border: 1px solid black;
+    line-height: 200px;
+    text-align: center;
+}

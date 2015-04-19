@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <link rel="stylesheet" href="css/jquery.mobile-1.0.1.min.css" />
+ <link rel="stylesheet" href="css/custom.css" />
+
+     <script type="text/javascript" src="js/libs/jquery-1.7.1/jquery.min.js"></script>
+        <script>
+            $(document).bind("mobileinit", function() {
+                $.mobile.defaultPageTransition = 'none';
+                $.mobile.defaultDialogTransition = 'none';
+                $.mobile.useFastClick = true;
+            });
+        </script>
+<script type="text/javascript" src="js/libs/jquery-1.7.1/jquery.min.js"></script>
+<script src="js/libs/parse.min.js"></script>
+   <script type="text/javascript" src="js/libs/jquery-mobile-1.0.1/jquery.mobile.min.js"></script>
+      <script type="text/javascript" src="js/libs/imagesloaded.pkgd.min.js"></script>
+   
+        <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+        <script type="text/javascript" src="cordova.js"></script>
+<script src="js/main.js"></script>
+</head>
+
+<body>
+ <div data-dom-cache="false" data-role="page" id="index" >
+            <div data-role="header" data-theme="b">
+
+                <h1>Connection games App</h1>
+            </div>
+            <div data-role="content"  style="padding:0.5em;">
+                <ul data-role="listview" data-divider-theme="b" data-inset="true">
+                    <li data-theme="c">
+                        <a href="#one2ten" rel="external" >
+                            Counting 1 to 10
+                        </a>
+                    </li>
+                    <li data-theme="c">
+                        <a href="#groupselfie">
+                            Group Selfy
+                        </a>
+                    </li>
+                    <li data-theme="c">
+                        <a href="#search" rel="external">
+                            Search Address
+                        </a>
+                    </li>
+                    <li data-theme="c">
+                        <a href="#directions">
+                            Find Directions
+                        </a>
+                    </li>
+                    <li data-theme="c">
+                        <a href="#compass">
+                            Compass
+                        </a>
+                    </li>
+                    <li data-theme="c">
+                        <a href="#photos">
+                            Photos Nearby
+                        </a>
+                    </li>
+                    <li data-theme="c">
+                        <a href="#about">
+                            About
+                        </a>
+                    </li>
+                </ul>
+
+
+            </div>
+ </div>
+    <div data-dom-cache="false" data-role="page" id="one2ten" >  
+        <div data-role="header" data-theme="b">
+                <a data-role="button" href="index.html" data-icon="home" data-iconpos="left"
+                   class="ui-btn-right">
+                    Home
+                </a>
+                <a data-role="button" data-rel="back" href="#one2ten" data-icon="arrow-l"
+                   data-iconpos="left" class="ui-btn-left" id="back-one2ten">
+                    Back
+                </a>
+                <h1 id="header">1 to 10 </h1></div>
+
+<div id="codes"></div>
+
+<form id="addgamecode">
+
+<p>
+<input type="text" id="codeTitle" placeHolder="Game code">
+</p>
+
+<p id="addCodeBtnP">
+<input type="button" id="addCodeBtn" value="Set code">
+</p>
+<p>
+<a data-role="button"  id="numberBtn" class="custom-btn" >Number</a>
+</p>
+</form>
+
+ <div data-role="footer" data-theme="b" data-position="fixed" >
+                <a data-role="button" data-rel="external" href="#" id="cancelMyNumberGame" style="margin: 0.4em; float: left" data-cache="false" data-icon="delete"
+                   data-iconpos="left" class="ui-btn-left" onclick="cancelMyNumberGame">
+                    Stop
+                </a>
+
+
+                <a data-role="button" data-rel="external" href="#" id="cancelMyNumberGame" style="margin: 0.4em; float: right" data-cache="false" data-icon="refresh"
+                   data-iconpos="left" class="ui-btn-right" onclick="cancelMyNumberGame">
+                    Refresh
+                </a>
+                <h4>1 to 10</h4>
+            </div>
+</div> 
+    
+    
+    
+    <div data-dom-cache="false" data-role="page" id="groupselfie" >  
+        <div data-role="header" data-theme="b">
+                <a data-role="button" href="index.html" data-icon="home" data-iconpos="left"
+                   class="ui-btn-right">
+                    Home
+                </a>
+                <a data-role="button" data-rel="back" href="#one2ten" data-icon="arrow-l"
+                   data-iconpos="left" class="ui-btn-left" id="back-groupselfie">
+                    Back
+                </a>
+                <h1 id="header">Group Selfie </h1></div>
+
+
+
+<form id="addgamecode">
+
+<p>
+<input type="text" id="codeTitle" placeHolder="Game code">
+</p>
+
+<p id="addCodeBtnP">
+<input type="button" id="addCodeBtnSelfie" value="Set code selfie">
+</p>
+
+    <div data-role="content"> 
+        <p>
+<img style="width:100%;"  id="largeImage" src="" />
+</p>
+    </div>
+<div id="status">
+    
+  </div>
+  <div id="image-container"></div>
+</form>
+
+ <div data-role="footer" data-theme="b" data-position="fixed" >
+                <a data-role="button" data-rel="external" href="#" id="cancelMyNumberGame" style="margin: 0.4em; float: left" data-cache="false" data-icon="delete"
+                   data-iconpos="left" class="ui-btn-left" onclick="cancelMyNumberGame">
+                    Stop
+                </a>
+
+
+                <a data-role="button" data-rel="external" href="#" id="cancelMyNumberGame" style="margin: 0.4em; float: right" data-cache="false" data-icon="refresh"
+                   data-iconpos="left" class="ui-btn-right" onclick="cancelMyNumberGame">
+                    Refresh
+                </a>
+                <h4>Group selfie</h4>
+            </div>
+</div> 
+</body>
+</html>
