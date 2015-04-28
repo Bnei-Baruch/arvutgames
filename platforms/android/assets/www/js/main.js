@@ -1,10 +1,20 @@
+/* global device, Parse */
+
 //Parse related keys
 var PARSE_APP = "Y3kKMKJl3H2V9ozFAJ2xaWcyHfXxGKGO8tSnANTB";
 var PARSE_JS = "8JNxFImF0zWQKJNt66sryAM7fEROK9caqtLxtXuS";
 
 $(document).ready(function () {
 
-   
+   document.addEventListener("backbutton", onBackKeyDown, false);
+
+    function onBackKeyDown() {
+    // Handle the back button
+     setTimeout(function () {
+                // do your thing here!
+                alert("Back clicked", "Error");
+            }, 0);
+    }
     $(document).on("pagebeforeshow", "#one2ten", function () {
 
         $("#numberBtn").button({icons: {primary: 'login-icon'}, text: true});
@@ -12,11 +22,49 @@ $(document).ready(function () {
         $("#addCodeBtn").closest('.ui-btn').show();
         $("#numberBtn").closest('.ui-btn').hide();
     });
+    $(document).on("pagebeforeshow", "#groupselfie", function () {
+
+       
+        $.mobile.changePage('#groupselfie', {reverse: false, changeHash: false});
+
+    });
+    
+    
+    
+function checkforImagesCompletion()
+{
+    
+     var query = new Parse.Query("GameObject");
+                                query.equalTo("code",code);
+                                var countImageObjects=0;
+                                query.find({
+                                    success: function (results) {
+                                        for(var i=0;i<results.length;i++)
+                                        {
+                                            var object = results[i];
+                                            if(object.get("image")!==null)
+                                                countImageObjects++;
+                                        }
+                                        if(countImageObjects==results.length)
+                                        {
+                                            //create collage
+                                            loadimages(results);
+                                        }
+                                        else
+                                            checkforImagesCompletion();
+                                            
+                                    },
+                                    error: function () {
+                                        response.error(-1);
+
+                                    }
+                                });
+}
 
 
-
-    function takepicture(code)
+function takepicture(code)
     {
+        
         if (!navigator.camera) {
             setTimeout(function () {
                 // do your thing here!
@@ -40,7 +88,10 @@ $(document).ready(function () {
                     image.style.display = 'block';
                     image.src = "data:image/jpeg;base64," + imgData;
 
-
+                    
+        
+                    
+                   
                     var GameObject = Parse.Object.extend("GameObject");
                     var gameObject = new GameObject();
                     gameObject.set("code", code);
@@ -77,6 +128,8 @@ $(document).ready(function () {
                                             //create collage
                                             loadimages(results);
                                         }
+                                        else
+                                            checkforImagesCompletion();
                                             
                                     },
                                     error: function () {
@@ -129,10 +182,11 @@ $(document).ready(function () {
     }
     ;
     Parse.initialize(PARSE_APP, PARSE_JS);
-    var code;
+    
 
     $("#numberBtn").on("touchend click", function (e) {
-        //var code = $("#codeTitle").val();
+        var code = $("#codeTitle").val();
+        
         var uuid = device.uuid;
         //var number = $("#numberBtn").text();
         Parse.Cloud.run('reportNumberclicked', {code: code, id: uuid}, {
@@ -182,6 +236,8 @@ $(document).ready(function () {
 
         //Grab the note details, no real validation for now
         code = $("#codeTitle").val();
+        
+        
         var uuid = device.uuid;
 
         Parse.Cloud.run('startNumberGame', {code: code, id: uuid}, {
@@ -241,18 +297,19 @@ button('refresh');
 
         //Grab the note details, no real validation for now
         code = $("#codeTitle").val();
-        var uuid = device.uuid;
-
-        Parse.Cloud.run('startNumberGame', {code: code, id: uuid}, {
-            success: function (number) {
+        
+        
+        
+        Parse.Cloud.run('startselfiGame', {code: code, id: uuid}, {
+            success: function (selfi) {
 
                 //should read the number got from server
 
                 // var button = $("#addCodeBtn");
                 $("#codeTitle").closest('.ui-input-text').hide();
-                $("#addCodeBtn").closest('.ui-btn').hide();
-
-                takepicture();
+                $("#addCodeBtnSelfie").closest('.ui-btn').hide();
+                $("#addCodeBtnSelfie").button("refresh");
+                takepicture(code);
 
 
 
@@ -287,25 +344,42 @@ button('refresh');
 //		});
     });
 
+ $("#back-selfi").on("touchend click", function (e) {
+
+        back();
+    });
     $("#back-one2ten").on("touchend click", function (e) {
 
-        console.log("back clicked");
+        back();
+    });
+
+
+function back()
+{
+    console.log("back clicked");
         //reset my number
+       //var code = $("#codeTitle").val();
+        
+        
         var uuid = device.uuid;
         var query = new Parse.Query("GameObject");
-        query.equalTo("code", code);
+        //query.equalTo("code", code);
         query.equalTo("uuid", uuid);
         query.find({
             success: function (results) {
-                results[0].destroy(results, {
+                for(var i=0;i<results.length;i++)
+                {
+                results[i].destroy(results, {
                     success: function () {
                         console.log("succeeded deleting " + results.length + " objects")
-                        createNewObjectAndReturn();
+                        
                     },
                     error: function (error) {
                         console.error("Error deleting related results " + error.code + ": " + error.message);
                     }
                 });
+                        }
+
 
             },
             error: function () {
@@ -314,9 +388,7 @@ button('refresh');
 
 
         });
-    });
-
-
+}
     function loadimages(parseObjects) {
 
         'use strict';

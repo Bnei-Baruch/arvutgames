@@ -53,6 +53,9 @@ module.exports = {
     }
 };
 
+// https://msdn.microsoft.com/en-us/library/windows/apps/ff462087(v=vs.105).aspx
+var windowsVideoContainers = [".avi", ".flv", ".asx", ".asf", ".mov", ".mp4", ".mpg", ".rm", ".srt", ".swf", ".wmv", ".vob"];
+var windowsPhoneVideoContainers =  [".avi", ".3gp", ".3g2", ".wmv", ".3gp", ".3g2", ".mp4", ".m4v"];
 
 // Resize method
 function resizeImage(successCallback, errorCallback, file, targetWidth, targetHeight, encodingType) {
@@ -134,27 +137,99 @@ function resizeImageBase64(successCallback, errorCallback, file, targetWidth, ta
     }, function(err) { errorCallback(err); });
 }
 
-function takePictureFromFile(successCallback, errorCallback, mediaType, destinationType, targetWidth, targetHeight, encodingType) {
-    // TODO: Add WP8.1 support
-    // WP8.1 doesn't allow to use of pickSingleFileAsync method
-    // see http://msdn.microsoft.com/en-us/library/windows/apps/br207852.aspx for details
-    // replacement of pickSingleFileAsync - pickSingleFileAndContinue method
-    // will take application to suspended state and this require additional logic to wake application up
-    if (navigator.appVersion.indexOf('Windows Phone 8.1') >= 0 ) {
-        errorCallback('Not supported');
-        return;
+function takePictureFromFile(successCallback, errorCallback, args) {
+    // Detect Windows Phone
+    if (navigator.appVersion.indexOf('Windows Phone 8.1') >= 0) {
+        takePictureFromFileWP(successCallback, errorCallback, args);
+    } else {
+        takePictureFromFileWindows(successCallback, errorCallback, args);
     }
+}
+
+function takePictureFromFileWP(successCallback, errorCallback, args) {
+    var mediaType = args[6],
+        destinationType = args[1],
+        targetWidth = args[3],
+        targetHeight = args[4],
+        encodingType = args[5];
+
+    /*
+        Need to add and remove an event listener to catch activation state
+        Using FileOpenPicker will suspend the app and it's required to catch the PickSingleFileAndContinue
+        https://msdn.microsoft.com/en-us/library/windows/apps/xaml/dn631755.aspx
+    */
+    var filePickerActivationHandler = function(eventArgs) {
+        if (eventArgs.kind === Windows.ApplicationModel.Activation.ActivationKind.pickFileContinuation) {
+            var file = eventArgs.files[0];
+            if (!file) {
+                errorCallback("User didn't choose a file.");
+                Windows.UI.WebUI.WebUIApplication.removeEventListener("activated", filePickerActivationHandler);
+                return;
+            }
+            if (destinationType == Camera.DestinationType.FILE_URI || destinationType == Camera.DestinationType.NATIVE_URI) {
+                if (targetHeight > 0 && targetWidth > 0) {
+                    resizeImage(successCallback, errorCallback, file, targetWidth, targetHeight, encodingType);
+                }
+                else {
+                    var storageFolder = Windows.Storage.ApplicationData.current.localFolder;
+                    file.copyAsync(storageFolder, file.name, Windows.Storage.NameCollisionOption.replaceExisting).done(function (storageFile) {
+                        successCallback(URL.createObjectURL(storageFile));
+                    }, function () {
+                        errorCallback("Can't access localStorage folder.");
+                    });
+                }
+            }
+            else {
+                if (targetHeight > 0 && targetWidth > 0) {
+                    resizeImageBase64(successCallback, errorCallback, file, targetWidth, targetHeight);
+                } else {
+                    Windows.Storage.FileIO.readBufferAsync(file).done(function (buffer) {
+                        var strBase64 = Windows.Security.Cryptography.CryptographicBuffer.encodeToBase64String(buffer);
+                        successCallback(strBase64);
+                    }, errorCallback);
+                }
+            }
+            Windows.UI.WebUI.WebUIApplication.removeEventListener("activated", filePickerActivationHandler);
+        }
+    };
 
     var fileOpenPicker = new Windows.Storage.Pickers.FileOpenPicker();
-    fileOpenPicker.suggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.picturesLibrary;
     if (mediaType == Camera.MediaType.PICTURE) {
         fileOpenPicker.fileTypeFilter.replaceAll([".png", ".jpg", ".jpeg"]);
+        fileOpenPicker.suggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.picturesLibrary;
     }
     else if (mediaType == Camera.MediaType.VIDEO) {
-        fileOpenPicker.fileTypeFilter.replaceAll([".avi", ".flv", ".asx", ".asf", ".mov", ".mp4", ".mpg", ".rm", ".srt", ".swf", ".wmv", ".vob"]);
+        fileOpenPicker.fileTypeFilter.replaceAll(windowsPhoneVideoContainers);
+        fileOpenPicker.suggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.videosLibrary;
     }
     else {
         fileOpenPicker.fileTypeFilter.replaceAll(["*"]);
+        fileOpenPicker.suggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.documentsLibrary;
+    }
+
+    Windows.UI.WebUI.WebUIApplication.addEventListener("activated", filePickerActivationHandler);
+    fileOpenPicker.pickSingleFileAndContinue();
+}
+
+function takePictureFromFileWindows(successCallback, errorCallback, args) {
+    var mediaType = args[6],
+        destinationType = args[1],
+        targetWidth = args[3],
+        targetHeight = args[4],
+        encodingType = args[5];
+
+    var fileOpenPicker = new Windows.Storage.Pickers.FileOpenPicker();
+    if (mediaType == Camera.MediaType.PICTURE) {
+        fileOpenPicker.fileTypeFilter.replaceAll([".png", ".jpg", ".jpeg"]);
+        fileOpenPicker.suggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.picturesLibrary;
+    }
+    else if (mediaType == Camera.MediaType.VIDEO) {
+        fileOpenPicker.fileTypeFilter.replaceAll(windowsVideoContainers);
+        fileOpenPicker.suggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.videosLibrary;
+    }
+    else {
+        fileOpenPicker.fileTypeFilter.replaceAll(["*"]);
+        fileOpenPicker.suggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.documentsLibrary;
     }
 
     fileOpenPicker.pickSingleFileAsync().done(function (file) {
@@ -173,7 +248,6 @@ function takePictureFromFile(successCallback, errorCallback, mediaType, destinat
                 }, function () {
                     errorCallback("Can't access localStorage folder.");
                 });
-
             }
         }
         else {
@@ -215,18 +289,29 @@ function takePictureFromCameraWP(successCallback, errorCallback, args) {
         captureSettings = null,
         CaptureNS = Windows.Media.Capture;
 
+    function cameraPreviewOrientation(arg) {
+        // Rotate the cam since WP8.1 MediaCapture outputs video stream rotated 90° CCW
+        if (screen.msOrientation === "portrait-primary" || screen.msOrientation === "portrait-secondary") {
+            capture.setPreviewRotation(Windows.Media.Capture.VideoRotation.clockwise90Degrees);
+        } else if (screen.msOrientation === "landscape-secondary") {
+            capture.setPreviewRotation(Windows.Media.Capture.VideoRotation.clockwise180Degrees);
+        } else {
+            capture.setPreviewRotation(Windows.Media.Capture.VideoRotation.none);
+        }
+    }
+
     var createCameraUI = function () {
         // Create fullscreen preview
         capturePreview = document.createElement("video");
 
         // z-order style element for capturePreview and captureCancelButton elts
         // is necessary to avoid overriding by another page elements, -1 sometimes is not enough
-        capturePreview.style.cssText = "position: fixed; left: 0; top: 0; width: 100%; height: 100%; z-order: 999";
+        capturePreview.style.cssText = "position: fixed; left: 0; top: 0; width: 100%; height: 100%; z-index: 999";
 
         // Create cancel button
         captureCancelButton = document.createElement("button");
         captureCancelButton.innerText = "Cancel";
-        captureCancelButton.style.cssText = "position: fixed; right: 0; bottom: 0; display: block; margin: 20px; z-order: 1000";
+        captureCancelButton.style.cssText = "position: fixed; right: 0; bottom: 0; display: block; margin: 20px; z-index: 1000";
 
         capture = new CaptureNS.MediaCapture();
 
@@ -253,9 +338,6 @@ function takePictureFromCameraWP(successCallback, errorCallback, args) {
             });
 
             capture.initializeAsync(captureSettings).done(function () {
-                // This is necessary since WP8.1 MediaCapture outputs video stream rotated 90 degrees CCW
-                // TODO: This can be not consistent across devices, need additional testing on various devices
-                capture.setPreviewRotation(Windows.Media.Capture.VideoRotation.clockwise90Degrees);
                 // msdn.microsoft.com/en-us/library/windows/apps/hh452807.aspx
                 capturePreview.msZoom = true;
                 capturePreview.src = URL.createObjectURL(capture);
@@ -266,6 +348,7 @@ function takePictureFromCameraWP(successCallback, errorCallback, args) {
                 document.body.appendChild(captureCancelButton);
 
                 // Bind events to controls
+                window.addEventListener('deviceorientation', cameraPreviewOrientation, false);
                 capturePreview.addEventListener('click', captureAction);
                 captureCancelButton.addEventListener('click', function () {
                     destroyCameraPreview();
@@ -279,6 +362,7 @@ function takePictureFromCameraWP(successCallback, errorCallback, args) {
     };
 
     var destroyCameraPreview = function () {
+        window.removeEventListener('deviceorientation', cameraPreviewOrientation, false);
         capturePreview.pause();
         capturePreview.src = null;
         [capturePreview, captureCancelButton].forEach(function(elem) {
@@ -297,8 +381,7 @@ function takePictureFromCameraWP(successCallback, errorCallback, args) {
         var encodingProperties,
             fileName,
             generateUniqueCollisionOption = Windows.Storage.CreationCollisionOption.generateUniqueName,
-            tempFolder = Windows.Storage.ApplicationData.current.temporaryFolder,
-            capturedFile;
+            tempFolder = Windows.Storage.ApplicationData.current.temporaryFolder;
 
         if (encodingType == Camera.EncodingType.PNG) {
             fileName = 'photo.png';
@@ -310,29 +393,55 @@ function takePictureFromCameraWP(successCallback, errorCallback, args) {
 
         tempFolder.createFileAsync(fileName, generateUniqueCollisionOption)
             .then(function(tempCapturedFile) {
-                capturedFile = tempCapturedFile;
-                return capture.capturePhotoToStorageFileAsync(encodingProperties, capturedFile);
+                return new WinJS.Promise(function (complete) {
+                    var imgStream = new Windows.Storage.Streams.InMemoryRandomAccessStream();
+                    capture.capturePhotoToStreamAsync(encodingProperties, imgStream)
+                    .then(function() {
+                        return Windows.Graphics.Imaging.BitmapDecoder.createAsync(imgStream);
+                    })
+                    .then(function(dec) {
+                        return Windows.Graphics.Imaging.BitmapEncoder.createForTranscodingAsync(imgStream, dec);
+                    })
+                    .then(function(enc) {
+                        // We need to rotate the photo 90° CW because by default wp8.1 takes 90° CCW rotated photos.
+                        enc.bitmapTransform.rotation = Windows.Graphics.Imaging.BitmapRotation.clockwise90Degrees;
+                        return enc.flushAsync();
+                    })
+                    .then(function() {
+                        return tempCapturedFile.openAsync(Windows.Storage.FileAccessMode.readWrite);
+                    })
+                    .then(function(fileStream) {
+                        return Windows.Storage.Streams.RandomAccessStream.copyAsync(imgStream, fileStream);
+                    })
+                    .done(function() {
+                        imgStream.close();
+                        complete(tempCapturedFile);
+                    }, function() {
+                        imgStream.close();
+                        throw new Error("An error has occured while capturing the photo.");
+                    });
+                })
             })
-            .done(function() {
+            .done(function(capturedFile) {
                 destroyCameraPreview();
 
                 // success callback for capture operation
-                var success = function(capturedfile) {
+                var success = function(capturedPhoto) {
                     if (destinationType == Camera.DestinationType.FILE_URI || destinationType == Camera.DestinationType.NATIVE_URI) {
                         if (targetHeight > 0 && targetWidth > 0) {
-                            resizeImage(successCallback, errorCallback, capturedFile, targetWidth, targetHeight, encodingType);
+                            resizeImage(successCallback, errorCallback, capturedPhoto, targetWidth, targetHeight, encodingType);
                         } else {
-                            capturedfile.copyAsync(Windows.Storage.ApplicationData.current.localFolder, capturedfile.name, generateUniqueCollisionOption).done(function(copiedfile) {
+                            capturedPhoto.copyAsync(Windows.Storage.ApplicationData.current.localFolder, capturedPhoto.name, generateUniqueCollisionOption).done(function(copiedfile) {
                                 successCallback("ms-appdata:///local/" + copiedfile.name);
                             }, errorCallback);
                         }
                     } else {
                         if (targetHeight > 0 && targetWidth > 0) {
-                            resizeImageBase64(successCallback, errorCallback, capturedfile, targetWidth, targetHeight);
+                            resizeImageBase64(successCallback, errorCallback, capturedPhoto, targetWidth, targetHeight);
                         } else {
-                            Windows.Storage.FileIO.readBufferAsync(capturedfile).done(function(buffer) {
+                            Windows.Storage.FileIO.readBufferAsync(capturedPhoto).done(function(buffer) {
                                 var strBase64 = Windows.Security.Cryptography.CryptographicBuffer.encodeToBase64String(buffer);
-                                capturedfile.deleteAsync().done(function() {
+                                capturedPhoto.deleteAsync().done(function() {
                                     successCallback(strBase64);
                                 }, function(err) {
                                     errorCallback(err);
@@ -379,7 +488,7 @@ function takePictureFromCameraWP(successCallback, errorCallback, args) {
                 };
 
                 var savePicker = new Windows.Storage.Pickers.FileSavePicker();
-                savePicker.suggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.documentsLibrary;
+                savePicker.suggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.picturesLibrary;
                 if (encodingType === Camera.EncodingType.PNG) {
                     savePicker.fileTypeChoices.insert("PNG", [".png"]);
                 } else {
@@ -475,7 +584,7 @@ function takePictureFromCameraWindows(successCallback, errorCallback, args) {
 
         var savePicker = new Windows.Storage.Pickers.FileSavePicker();
 
-        savePicker.suggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.documentsLibrary;
+        savePicker.suggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.picturesLibrary;
         if (encodingType === Camera.EncodingType.PNG) {
             savePicker.fileTypeChoices.insert("PNG", [".png"]);
             savePicker.suggestedFileName = "photo.png";
