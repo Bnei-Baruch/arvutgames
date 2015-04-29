@@ -1,0 +1,14 @@
+{
+    "applications": {
+        "ConnectionGames": {
+            "applicationId": "Y3kKMKJl3H2V9ozFAJ2xaWcyHfXxGKGO8tSnANTB", 
+            "masterKey": "s6glPpyE36vJ3m5hd3yD2N4hwhmOaTYoDkEfq4uS"
+        }, 
+        "_default": {
+            "link": "ConnectionGames"
+        }
+    }, 
+    "global": {
+        "parseVersion": "1.3.4"
+    }
+}
